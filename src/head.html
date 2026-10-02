@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+  <title>Mindustry JSON Studio & Inspector</title>
+  <!-- LAYOUT SWITCH EARLY INIT -->
+  <script>
+    (function () {
+      var KEY = "mindustryStudio.layout";
+      function isPhoneLike() {
+        var w = window.innerWidth || document.documentElement.clientWidth || 0;
+        var coarse = false;
+        try { coarse = window.matchMedia("(pointer: coarse)").matches; } catch (e) {}
+        var shortSide = Math.min(window.screen.width || 9999, window.screen.height || 9999);
+
+        return w <= 820 || (coarse && shortSide <= 500);
+      }
+      window.MS_LAYOUT = {
+        key: KEY,
+        auto: function () { return isPhoneLike() ? "mobile" : "desktop"; },
+        resolve: function (mode) {
+          return mode === "mobile" || mode === "desktop" ? mode : window.MS_LAYOUT.auto();
+        }
+      };
+      var mode = "auto";
+      try { mode = localStorage.getItem(KEY) || "auto"; } catch (e) {}
+      var root = document.documentElement;
+      root.setAttribute("data-layout", window.MS_LAYOUT.resolve(mode));
+      root.setAttribute("data-pane", "editor");
+    })();
+</script>
+
+  <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
