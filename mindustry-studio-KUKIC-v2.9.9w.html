@@ -1812,6 +1812,28 @@ html[data-theme="light"] .ai-response-box { background: #f7f9fc; color: #333; }
           </div>
         </div>
 
+        <!-- SIM DPS METER HTML -->
+        <div class="card" id="simDpsCard">
+          <div class="card-title"><span>⚡ Счётчик DPS</span><span id="simDpsWindowTag" style="color: var(--text-muted); font-weight: 400;"></span></div>
+          <div class="ai-row" style="flex-wrap: wrap; gap: 6px;">
+            <button class="btn" id="btnSimDpsPause" title="Заморозить счётчик, чтобы снять точное значение">❄ Заморозить</button>
+            <button class="btn" id="btnSimDpsReset" title="Обнулить накопленный урон и время замера">↻ Обнулить</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <label for="simDpsWindow" style="font-size:11px; color: var(--text-muted); width: 60px;">Окно</label>
+            <select class="search-input" id="simDpsWindow" style="margin-bottom:0; flex:1;">
+              <option value="0" selected>Всё время</option>
+              <option value="60">1 сек (60 тиков)</option>
+              <option value="180">3 сек</option>
+              <option value="300">5 сек</option>
+            </select>
+          </div>
+          <div id="simDpsBody" style="font-size: 11px; line-height: 1.5; margin-top: 8px; color: var(--text-muted);">
+            Нет данных — запустите симуляцию (▶) с оружием на объекте.
+          </div>
+          <div class="sim-hint">DPS = средний урон в секунду по цели (60 тиков = 1 сек как в Mindustry). Учитываются прямые попадания, splash, осколки (frag), молнии и урон статус-эффектов. Статусы замедленного/небоевых эффектов не считаются.</div>
+        </div>
+
         <div class="card" id="simInfoCard" style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
           Симулятор упрощённо воспроизводит физику огня Mindustry.
           дорабатываеться...
@@ -6356,7 +6378,17 @@ function openFieldInDatabase(key) {
       autoRespawn: false,
       kb: { up: false, down: false, left: false, right: false, fire: false },
       pad: { up: false, down: false, left: false, right: false, fire: false },
-      enemyDamage: null
+      enemyDamage: null,
+
+      // Счётчик DPS: история урона по цели (в тиках симуляции)
+      dps: {
+        history: [],        // [{ t: тик, dmg: суммарный урон за этот тик }]
+        totalDmg: 0,        // весь накопленный урон (для окна «Всё время»)
+        startTick: 0,       // тик, с которого ведётся отсчёт
+        window: 0,          // размер окна в тиках (0 = всё время)
+        frozen: false,      // заморозить счётчик
+        lastShown: null     // последнее показанное значение (для подсветки)
+      }
     };
     const SIM_MANUAL_LIMIT = 290;
     function simCtl(name) { return !!(SIM.kb[name] || SIM.pad[name]); }
@@ -6612,6 +6644,7 @@ function openFieldInDatabase(key) {
       SIM.target.hp = SIM.target.maxHp;
       SIM.target.status = null;
       SIM.target.statusDps = 0;
+      simDpsReset();
       simSyncTargetHpInputs();
     }
 
@@ -6887,11 +6920,87 @@ function openFieldInDatabase(key) {
       tgt.hp = Math.max(0, tgt.hp - Math.max(0, dmg));
     }
 
+    // --- СЧЁТЧИК DPS ---
+    // Учитывается только урон, нанесённый НАШЕЙ целью (не входящие снаряды врага).
+    function simDpsRecord(dmg) {
+      const d = SIM.dps;
+      if (d.frozen || !(dmg > 0)) return;
+      d.totalDmg += dmg;
+      const last = d.history[d.history.length - 1];
+      if (last && last.t === SIM.tick) last.dmg += dmg;
+      else d.history.push({ t: SIM.tick, dmg });
+    }
+
+    function simDpsCompute() {
+      const d = SIM.dps;
+      const now = SIM.tick;
+      let dmg, span;
+      if (d.window > 0) {
+        const from = now - d.window;
+        dmg = 0;
+        for (let i = d.history.length - 1; i >= 0; i--) {
+          if (d.history[i].t < from) break;
+          dmg += d.history[i].dmg;
+        }
+        span = Math.min(d.window, Math.max(0, now - d.startTick));
+      } else {
+        dmg = d.totalDmg;
+        span = Math.max(0, now - d.startTick);
+      }
+      const seconds = span / 60;
+      // Если урона ещё нет, не показывать "мусорный" DPS на первых кадрах замера
+      const dps = (seconds > 0 && dmg > 0) ? dmg / seconds : 0;
+      return { dmg, seconds, dps };
+    }
+
+    function simDpsReset() {
+      const d = SIM.dps;
+      d.history = [];
+      d.totalDmg = 0;
+      d.startTick = SIM.tick;
+    }
+
+    function simFormatNum(v, digits) {
+      if (!isFinite(v)) return "0";
+      const s = v.toFixed(digits == null ? 1 : digits);
+      return s.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+    }
+
+    function simUpdateDpsUI() {
+      const body = document.getElementById("simDpsBody");
+      const tag = document.getElementById("simDpsWindowTag");
+      if (!body || !tag) return;
+      const d = SIM.dps;
+      const r = simDpsCompute();
+      const windowLabel = d.window > 0 ? "окно " + simFormatNum(d.window / 60, 1) + " сек" : "всё время";
+      tag.textContent = (d.frozen ? "❄ заморожено · " : "") + windowLabel;
+
+      if (r.seconds <= 0 && r.dmg <= 0) {
+        body.innerHTML = 'Нет данных — запустите симуляцию (▶) с оружием на объекте.';
+        return;
+      }
+      const dpsColor = r.dps > 0 ? "var(--accent-mind, #ffcd75)" : "var(--text-muted)";
+      const hitCount = d.history.reduce((n, h) => n + (h.dmg > 0 ? 1 : 0), 0);
+      body.innerHTML =
+        '<div style="display:flex; align-items:baseline; gap:8px;">' +
+          '<span style="font-size:22px; font-weight:700; color:' + dpsColor + ';">' + simFormatNum(r.dps, 1) + '</span>' +
+          '<span style="color:var(--text-muted);">DPS (урон/сек)</span>' +
+        '</div>' +
+        '<div style="margin-top:4px;">' +
+          'Урон за замер: <b style="color:var(--text-primary,#e6edf3);">' + simFormatNum(r.dmg, 0) + '</b>' +
+          ' · Время: <b>' + simFormatNum(r.seconds, 1) + ' сек</b>' +
+          ' · Тиков с уроном: <b>' + hitCount + '</b>' +
+        '</div>';
+    }
+
     function simApplyHit(b, bt, tgt, directHit) {
+      const isOurTarget = (tgt === SIM.target);
+      let dpsAccum = 0;
       if (directHit) {
         let dmg = bt.damage;
         if (b.pierced) dmg *= Math.pow(bt.pierceDamageFactor, b.pierced);
         simApplyDamage(tgt, dmg);
+        dpsAccum += dmg;
         simSpawnEffect(b.x, b.y, "hit", 14, bt.color);
         simSpawnBurst(b.x, b.y, bt.color, 5, 1.2);
       }
@@ -6900,7 +7009,9 @@ function openFieldInDatabase(key) {
         if (d <= bt.splashDamageRadius) {
 
           const falloff = 1 - (d / bt.splashDamageRadius) * 0.75;
-          simApplyDamage(tgt, bt.splashDamage * Math.max(0.15, falloff));
+          const sdmg = bt.splashDamage * Math.max(0.15, falloff);
+          simApplyDamage(tgt, sdmg);
+          dpsAccum += sdmg;
         }
         simSpawnEffect(b.x, b.y, "splash", 16, bt.color, bt.splashDamageRadius);
       }
@@ -6927,7 +7038,9 @@ function openFieldInDatabase(key) {
       if (bt.lightningChance > 0 && Math.random() < bt.lightningChance) {
         simSpawnLightning(b.x, b.y, bt.lightningLength, bt.color);
         simApplyDamage(tgt, bt.lightningDamage);
+        dpsAccum += bt.lightningDamage;
       }
+      if (isOurTarget && dpsAccum > 0) simDpsRecord(dpsAccum);
     }
 
     function simTickBullet(dt, idx) {
@@ -7252,7 +7365,11 @@ function openFieldInDatabase(key) {
 
       if (SIM.target.statusTimer > 0) {
         SIM.target.statusTimer -= dt;
-        if (SIM.target.statusDps > 0 && SIM.target.hp > 0) simApplyDamage(SIM.target, SIM.target.statusDps * dt);
+        if (SIM.target.statusDps > 0 && SIM.target.hp > 0) {
+          const sdmg = SIM.target.statusDps * dt;
+          simApplyDamage(SIM.target, sdmg);
+          simDpsRecord(sdmg);
+        }
         if (SIM.target.statusTimer <= 0) { SIM.target.status = null; SIM.target.statusDps = 0; }
       }
 
@@ -7709,6 +7826,7 @@ function openFieldInDatabase(key) {
         }
       }
       try { simRender(); } catch (err) { simReportError("отрисовка", err); }
+      if (SIM.tick % 10 === 0 || !SIM.running) { try { simUpdateDpsUI(); } catch (err) { simReportError("DPS-счётчик", err); } }
       SIM.rafId = requestAnimationFrame(simLoop);
     }
 
@@ -7745,6 +7863,25 @@ function openFieldInDatabase(key) {
         hpInput.value = Math.round(SIM.target.hp);
       });
       document.getElementById("simTargetSize").addEventListener("change", (e) => { SIM.target.size = parseFloat(e.target.value) || 14; });
+
+      // Счётчик DPS — элементы управления
+      const dpsWindowSel = document.getElementById("simDpsWindow");
+      if (dpsWindowSel) dpsWindowSel.addEventListener("change", (e) => {
+        SIM.dps.window = parseInt(e.target.value, 10) || 0;
+        simUpdateDpsUI();
+      });
+      const btnDpsPause = document.getElementById("btnSimDpsPause");
+      if (btnDpsPause) btnDpsPause.addEventListener("click", () => {
+        SIM.dps.frozen = !SIM.dps.frozen;
+        btnDpsPause.classList.toggle("btn-mind", SIM.dps.frozen);
+        btnDpsPause.textContent = SIM.dps.frozen ? "▶ Разморозить" : "❄ Заморозить";
+        simUpdateDpsUI();
+      });
+      const btnDpsReset = document.getElementById("btnSimDpsReset");
+      if (btnDpsReset) btnDpsReset.addEventListener("click", () => {
+        simDpsReset();
+        simUpdateDpsUI();
+      });
       SIM.canvas.addEventListener("click", (e) => {
         if (!SIM.targetDragMode) return;
         const rect = SIM.canvas.getBoundingClientRect();
