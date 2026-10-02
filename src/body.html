@@ -1,0 +1,532 @@
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">M</div>
+      <!-- SETTINGS GEAR BUTTON -->
+      <button class="theme-toggle-btn" id="btnSettings" title="Настройки: интерфейс, тема, источник рецептов">⚙️</button>
+
+      <div>
+        <div class="brand-title">
+          Mindustry JSON Studio
+          <span class="badge-v7">v8/v9 Build</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn" id="btnFormat" title="Форматировать и выровнять JSON">
+        <span>⚡ Выровнять</span>
+      </button>
+      <button class="btn" id="btnCollapse" title="Свернуть все строки в компактный вид">
+        <span>🗜 Свернуть</span>
+      </button>
+      <button class="btn" id="btnValidate" title="Проверить валидность">
+        <span>✓ Проверить</span>
+      </button>
+      <button class="btn" id="btnUpload" title="Загрузить готовый JSON файл">
+        <span>📂 Загрузить JSON</span>
+      </button>
+      <input type="file" id="fileUploadInput" class="visually-hidden-file-input" accept=".json,.hjson,application/json,text/plain">
+      <button class="btn" id="btnCopy" title="Скопировать готовый код">
+        <span>📋 Скопировать</span>
+      </button>
+      <button class="btn btn-mind" id="btnDownload" title="Сохранить файл JSON на диск">
+        <span>💾 Скачать .json</span>
+      </button>
+      <button class="btn" id="btnHelp" title="Справка по структуре модов">
+        <span>ℹ️ Помощь</span>
+      </button>
+        <button class="btn" id="btnAllFields" title="Показать все поля, сгруппированные по типам">
+        <span>📚 Все поля</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="main-workspace">
+
+    <!-- Left: Mod files / Templates -->
+    <div class="sidebar-left">
+      <!-- MOD FILES SIDEBAR HTML -->
+      <div class="sidebar-mode-switch">
+        <button class="sidebar-mode-btn active" id="sidebarModeFiles">📁 Файлы мода</button>
+        <button class="sidebar-mode-btn" id="sidebarModeTemplates">🧩 Шаблоны</button>
+      </div>
+
+      <div id="sidebarFilesPane" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+        <div class="sidebar-load-actions">
+          <button class="btn btn-mind" id="btnLoadFolder" title="Открыть папку мода целиком (требуется Chrome/Edge)">
+            <span>📂 Загрузить папку мода</span>
+          </button>
+          <button class="btn" id="btnLoadFolderLegacy" title="Загрузить папку через выбор файлов (работает везде, но без сохранения обратно на диск)">
+            <span>📦 Загрузить папку (все браузеры)</span>
+          </button>
+          <input type="file" id="folderUploadInputLegacy" class="visually-hidden-file-input" webkitdirectory directory multiple>
+          <!-- MOD FILE CREATE/DELETE BUTTON -->
+          <button class="btn" id="btnNewModFile" title="Создать новый пустой файл (чистый лист)">
+            <span>🆕 Новый файл</span>
+          </button>
+
+        </div>
+        <div class="mod-folder-name" id="modFolderName"></div>
+        <div class="template-list" id="fileList">
+          <div class="file-empty-hint">
+            Папка мода ещё не загружена. Нажмите «Загрузить папку мода», чтобы открыть содержимое вашего мода
+            (mod.json, content/blocks, content/units, sprites и т.д.) прямо здесь — файлы читаются локально,
+            никуда не отправляются. Либо нажмите «🆕 Новый файл» и начните с чистого листа без загрузки папки.
+          </div>
+        </div>
+      </div>
+
+      <div id="sidebarTemplatesPane" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+        <div class="template-list" id="templateList"></div>
+      </div>
+
+    </div>
+
+    <!-- Center: Editor -->
+    <div class="editor-section">
+      <div class="editor-bar">
+        <div class="editor-status">
+          <span id="fileNameDisplay">heavy-duo.json</span>
+          <span class="status-badge status-ok" id="statusBadge">JSON корректен</span>
+          <!-- FIELD TYPO DETECTION BADGE -->
+          <span class="status-badge status-warn" id="typoBadge" style="display: none;" title="Клик — перейти к первой опечатке"></span>
+
+        </div>
+        <div id="cursorPosDisplay">Стр 1, Кол 1</div>
+      </div>
+      <div class="editor-container">
+        <div class="line-numbers" id="lineNumbers"><div id="lineNumbersInner"></div></div>
+        <div class="code-stack">
+          <div class="error-line-highlight" id="errorLineHighlight"></div>
+          <pre class="code-highlight" id="codeHighlight" aria-hidden="true"><code id="codeHighlightContent"></code></pre>
+          <textarea class="code-area" id="codeEditor" spellcheck="false" placeholder="Введите ваш JSON код здесь..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Inspector -->
+    <div class="inspector-section">
+      <div class="inspector-tabs">
+        <button class="tab-btn active" id="tabInspectBtn">Строка и свойства</button>
+        <button class="tab-btn" id="tabDbBtn">База знаний</button>
+        <!-- BULLET DB TAB BUTTON -->
+        <button class="tab-btn" id="tabBulletsBtn">Снаряды</button>
+
+        <!-- STATUS DB TAB BUTTON -->
+        <button class="tab-btn" id="tabStatusBtn">Статус-эффекты</button>
+
+        <!-- COLOR/FX TAB BUTTON -->
+        <button class="tab-btn" id="tabColorsBtn">Цвета/FX</button>
+
+        <!-- AI TAB BUTTON -->
+        <button class="tab-btn" id="tabAiBtn">🤖 ИИ</button>
+
+        <!-- SIMULATOR TAB BUTTON -->
+        <button class="tab-btn" id="tabSimBtn">🎮 Имулятор</button>
+
+        <!-- RECIPES TAB BUTTON -->
+        <button class="tab-btn" id="tabRecipesBtn">📦 Рецепты</button>
+
+        <!-- MODS TAB BUTTON -->
+        <button class="tab-btn" id="tabModsBtn">🧩 Моды</button>
+
+      </div>
+
+      <div class="inspector-body" id="tabInspectContent">
+
+        <!-- Current line hint card -->
+        <div class="card current-line-box">
+          <div class="card-title">
+            <span>Текущая строка <span id="hintLineNum">#1</span></span>
+            <span id="hintTag" style="color: var(--accent-mind);">Анализ</span>
+          </div>
+          <div class="prop-name" id="hintPropName">Нажмите на строку кода</div>
+          <div class="prop-type" id="hintPropType">Ожидание выбора</div>
+          <div class="prop-desc" id="hintPropDesc">
+            Поставьте курсор на любое поле или свойство в редакторе, чтобы увидеть его подробное описание, единицы измерения и допустимые значения в Mindustry.
+          </div>
+          <div class="prop-example" id="hintExample">"name": "Название объекта"</div>
+        </div>
+
+        <!-- VALIDATOR DIAGNOSTICS CARD -->
+
+        <div class="card" id="diagCard" style="display: none;">
+          <div class="card-title">
+            <span>Диагностика</span>
+            <span id="diagCount" style="color: var(--accent-red);">0 проблем</span>
+          </div>
+          <div class="diag-list" id="diagList"></div>
+        </div>
+
+        <!-- Autocomplete Suggestions -->
+        <div class="card">
+          <div class="card-title">
+            <span>Что дописать дальше?</span>
+            <span id="suggestCount" style="color: var(--accent-cyan);">Рекомендации</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+            Кликните по свойству, чтобы вставить его в код:
+          </div>
+          <div class="suggest-list" id="suggestList"></div>
+        </div>
+
+      </div>
+
+      <!-- Tab: Database search -->
+      <div class="inspector-body" id="tabDbContent" style="display: none;">
+        <input type="text" class="search-input" id="dbSearchInput" placeholder="Поиск по свойствам (damage, reload, bullet, speed)...">
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div id="dbSearchResults" style="max-height: 520px; overflow-y: auto;"></div>
+        </div>
+      </div>
+
+      <!-- BULLET DB TAB CONTENT -->
+      <!-- Tab: Bullet types database -->
+      <div class="inspector-body" id="tabBulletsContent" style="display: none;">
+        <input type="text" class="search-input" id="bulletSearchInput" placeholder="Поиск по снарядам (Basic, Missile, Laser, взрыв, ЭМИ)...">
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div id="bulletSearchResults" style="max-height: 520px; overflow-y: auto;"></div>
+        </div>
+      </div>
+
+      <!-- STATUS DB TAB CONTENT -->
+      <!-- Tab: Status effects database -->
+      <div class="inspector-body" id="tabStatusContent" style="display: none;">
+        <input type="text" class="search-input" id="statusSearchInput" placeholder="Поиск по эффектам (burning, slow, shielded, дебафф)...">
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div id="statusSearchResults" style="max-height: 520px; overflow-y: auto;"></div>
+        </div>
+      </div>
+
+      <!-- COLOR/FX TAB CONTENT -->
+
+      <div class="inspector-body" id="tabColorsContent" style="display: none;">
+        <input type="text" class="search-input" id="colorsSearchInput" placeholder="Поиск по цветам и эффектам (scarlet, accent, дым, искры)...">
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <div style="padding: 8px 10px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border-color);">
+            Цветовые теги для полей <code>name</code>/<code>description</code> и hex-цвета для <code>colors</code>/<code>hitColor</code>/<code>trailColor</code>, а также справочник мелких визуальных эффектов.
+          </div>
+          <div id="colorsSearchResults" style="max-height: 480px; overflow-y: auto;"></div>
+        </div>
+      </div>
+
+      <!-- AI TAB CONTENT -->
+
+      <div class="inspector-body" id="tabAiContent" style="display: none;">
+        <div class="ai-key-warning">
+          ⚠️ Чтобы вкладка ИИ заработала, впишите свой API-ключ в код этого файла.
+          Найдите в конце файла (внутри тега &lt;script&gt;) строку
+          <code>const AI_CONFIG = { apiKey: "" ... }</code> и вставьте ключ между кавычками
+          <code>apiKey: "sk-..."</code>. Ключ хранится только в этом локальном файле и
+          отправляется напрямую в api.deepseek.com — никуда больше.
+        </div>
+        <div class="card">
+          <div class="card-title"><span>Модель</span></div>
+          <select class="search-input" id="aiModelSelect" style="margin-bottom: 0;">
+            <option value="deepseek-chat">deepseek-chat (рекомендуется)</option>
+            <option value="deepseek-reasoner">deepseek-reasoner</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span>Промт</span>
+            <label style="font-weight: 400; font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-muted);">
+              <input type="checkbox" id="aiIncludeCode" checked> включить текущий JSON
+            </label>
+          </div>
+          <textarea class="ai-textarea" id="aiPromptInput" placeholder="Например: добавь турели статус-эффект burning и увеличь урон на 20%"></textarea>
+          <div class="ai-row" style="margin-top: 8px;">
+            <button class="btn btn-mind" id="btnAiSend">🚀 Отправить запрос</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span>Ответ ИИ</span>
+            <span id="aiStatusTag" style="color: var(--text-muted);">Ожидание</span>
+          </div>
+          <div class="ai-response-box" id="aiResponseBox">Здесь появится ответ модели.</div>
+          <div class="ai-row" style="margin-top: 8px;">
+            <button class="btn" id="btnAiInsert" title="Вставить последний ответ ИИ прямо в редактор кода">⬇ Вставить в редактор</button>
+            <button class="btn" id="btnAiCopy" title="Скопировать ответ ИИ в буфер обмена">📋 Копировать ответ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIMULATOR TAB CONTENT -->
+
+      <div class="inspector-body" id="tabSimContent" style="display: none;">
+        <div class="card" style="padding: 8px;">
+          <div class="card-title">
+            <span>Сцена</span>
+            <span id="simKindTag" style="color: var(--accent-cyan);">—</span>
+          </div>
+          <div style="display:flex; justify-content:center; background:#05070a; border-radius:6px; border:1px solid var(--border-color); overflow:hidden;">
+            <canvas id="simCanvas" width="340" height="340" style="display:block; cursor: default;"></canvas>
+          </div>
+          <div id="simEmptyHint" style="font-size:11px; color: var(--text-muted); margin-top: 6px; display:none;">
+            Не удалось разобрать JSON как объект Mindustry — проверьте, что код в редакторе валиден.
+          </div>
+        </div>
+
+        <!-- SIM MODES HTML -->
+        <div class="card" id="simModeCard">
+          <div class="card-title"><span>Режим</span></div>
+          <div class="sim-mode-switch">
+            <button class="btn btn-mind" id="btnSimModeCombat" title="Враг стреляет по объекту, юнит действует сам">⚔️ Бой</button>
+            <button class="btn" id="btnSimModeManual" title="Враг не атакует, юнитом управляете вы">🕹️ Ручной</button>
+          </div>
+          <div class="sim-hint" id="simModeHint"></div>
+        </div>
+
+        <div class="card sim-controls-card" id="simControlsCard" style="display:none;">
+
+          <div class="sim-keys sim-desktop-only" id="simKeysHint"></div>
+          <div class="card-title sim-touch-only"><span>Управление юнитом</span></div>
+          <div class="sim-controls-row sim-touch-only">
+            <div class="sim-dpad" id="simDpad">
+              <span class="sim-pad-empty"></span>
+              <button class="sim-pad-btn" data-ctl="up" aria-label="Вверх">▲</button>
+              <span class="sim-pad-empty"></span>
+              <button class="sim-pad-btn" data-ctl="left" aria-label="Влево">◀</button>
+              <button class="sim-pad-btn" id="btnSimStop" aria-label="Стоп" title="Остановить юнит">■</button>
+              <button class="sim-pad-btn" data-ctl="right" aria-label="Вправо">▶</button>
+              <span class="sim-pad-empty"></span>
+              <button class="sim-pad-btn" data-ctl="down" aria-label="Вниз">▼</button>
+              <span class="sim-pad-empty"></span>
+            </div>
+            <div class="sim-fire-col">
+              <button class="btn btn-mind sim-fire-btn sim-pad-btn" data-ctl="fire" id="btnSimFire" style="color:#0a0c10; background: var(--accent-mind);">🔥 Огонь</button>
+            </div>
+          </div>
+          <label class="sim-autofire-row">
+            <input type="checkbox" id="simAutoFire" checked> авто-огонь по цели
+          </label>
+          <div class="sim-hint" id="simControlsHint"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span>Управление</span></div>
+          <div class="ai-row" style="flex-wrap: wrap; gap: 6px;">
+            <button class="btn btn-mind" id="btnSimPlay" title="Запустить симуляцию">▶</button>
+            <button class="btn" id="btnSimPause" title="Пауза">⏸</button>
+            <button class="btn" id="btnSimReset" title="Сбросить снаряды и HP">↻ Сброс</button>
+            <button class="btn" id="btnSimTarget" title="Перетащить цель кликом по канвасу">🎯 Цель</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+            <label for="simSpeedSelect" style="font-size:11px; color: var(--text-muted); white-space:nowrap;">Скорость</label>
+            <select class="search-input" id="simSpeedSelect" style="margin-bottom:0;">
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+          </div>
+          <label style="font-weight: 400; font-size: 11px; display: flex; align-items: center; gap: 6px; color: var(--text-muted); margin-top:10px;">
+            <input type="checkbox" id="simShowRadii" checked> показывать радиусы (range / shootCone)
+          </label>
+          <label style="font-weight: 400; font-size: 11px; display: flex; align-items: center; gap: 6px; color: var(--text-muted); margin-top:8px;" title="Если выключено, погибший объект остаётся мёртвым и не стреляет до кнопки «Сброс»">
+            <input type="checkbox" id="simAutoRespawn"> авто-возрождение после смерти
+          </label>
+        </div>
+
+        <!-- SIM ENEMY DAMAGE HTML -->
+        <div class="card" id="simEnemyCard">
+          <div class="card-title"><span>Урон врага</span><span id="simEnemyAutoTag" style="color: var(--text-muted); font-weight: 400;"></span></div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="simEnemyDamage" style="font-size:11px; color: var(--text-muted); width: 60px;">За выстрел</label>
+            <input type="number" class="search-input" id="simEnemyDamage" min="0" step="1" style="flex:1; margin-bottom:0;">
+          </div>
+          <input type="range" id="simEnemyDamageRange" min="0" max="200" step="1" style="width:100%; margin-top:8px;">
+          <div class="ai-row" style="flex-wrap: wrap; gap: 6px; margin-top:8px;">
+            <button class="btn" id="btnEnemyDmgHalf" title="Уменьшить вдвое">× ½</button>
+            <button class="btn" id="btnEnemyDmgDouble" title="Увеличить вдвое">× 2</button>
+            <button class="btn" id="btnEnemyDmgAuto" title="Вернуть значение по умолчанию (4% от здоровья объекта)">Авто</button>
+          </div>
+          <div class="sim-hint" id="simEnemyHint">Враг (красная цель) стреляет по вашему объекту раз в ~100 тиков. Статусы на его снарядах остаются.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span>Параметры цели</span></div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="simTargetMaxHp" style="font-size:11px; color: var(--text-muted); width: 60px;">Макс. HP</label>
+            <input type="number" class="search-input" id="simTargetMaxHp" min="1" step="1" value="1000" style="flex:1; margin-bottom:0;">
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <label for="simTargetHp" style="font-size:11px; color: var(--text-muted); width: 60px;">HP цели</label>
+            <input type="number" class="search-input" id="simTargetHp" min="0" step="1" value="1000" style="flex:1; margin-bottom:0;">
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <label for="simTargetSize" style="font-size:11px; color: var(--text-muted); width: 60px;">Размер</label>
+            <select class="search-input" id="simTargetSize" style="margin-bottom:0; flex:1;">
+              <option value="8">Маленькая</option>
+              <option value="14" selected>Средняя</option>
+              <option value="22">Большая</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" id="simInfoCard" style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+          Симулятор упрощённо воспроизводит физику огня Mindustry.
+          дорабатываеться...
+        </div>
+      </div>
+
+      <!-- RECIPES TAB CONTENT -->
+
+      <div class="inspector-body" id="tabRecipesContent" style="display: none;">
+        <div class="sidebar-load-actions">
+          <button class="btn btn-mind" id="btnLoadRecipes" title="Открыть папку с рецептами напрямую (Chrome/Edge/Opera; в Brave может требовать brave://flags/#file-system-access-api)">
+            <span>📂 Загрузить папку рецептов</span>
+          </button>
+          <button class="btn" id="btnLoadRecipesLegacy" title="Загрузить папку через выбор файлов (работает везде, включая Brave/Firefox/Safari, но без сохранения обратно на диск)">
+            <span>📦 Загрузить файл (все браузеры)</span>
+          </button>
+          <input type="file" id="recipesUploadInputLegacy" class="visually-hidden-file-input" webkitdirectory directory multiple>
+          <button class="btn" id="btnSaveRecipe" title="Сохранить текущий код редактора как новый рецепт в библиотеку (нужен доступ к диску)">
+            <span>💾 Сохранить рецепт</span>
+          </button>
+        </div>
+        <div class="mod-folder-name" id="recipesFolderName"></div>
+        <input type="text" class="search-input" id="recipesSearchInput" placeholder="Поиск по рецептам (имя, описание, теги)...">
+        <div class="card" style="padding: 0;">
+          <div id="recipesResults">
+            <div class="file-empty-hint">
+              Общая библиотека рецептов загружается автоматически. Чтобы работать со своей папкой — «Загрузить папку рецептов»
+              (Chrome/Edge/Opera) или «Загрузить файл (все браузеры)» (Brave, Firefox, Safari — без сохранения на диск).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODS TAB CONTENT -->
+      <div class="inspector-body" id="tabModsContent" style="display: none;">
+        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
+          <span id="modsIndexStatus" style="font-size:10px; color:var(--text-muted); flex:1;">⏳ Список модов ещё не загружен</span>
+          <button class="btn" id="btnRefreshModsIndex" style="padding:3px 8px; font-size:10px;">🔄 Обновить</button>
+          <a class="btn" href="https://github.com/Anuken/MindustryMods" target="_blank" rel="noopener noreferrer" style="padding:3px 8px; font-size:10px; text-decoration:none;">↗ Источник</a>
+        </div>
+        <input type="text" class="search-input" id="modsSearchInput" placeholder="Поиск по модам (имя, автор, репозиторий)...">
+        <div class="card" style="padding: 0;">
+          <div id="modsResults">
+            <div class="file-empty-hint">
+              Выберите мод из списка — студия скачает его файлы с GitHub и покажет дерево.
+            </div>
+          </div>
+        </div>
+        <!-- MOD DETAIL -->
+        <div class="card" id="modDetailCard" style="display: none;">
+          <div class="card-title">
+            <span id="modDetailName">—</span>
+            <button class="btn" id="btnModCloseDetail" style="padding: 2px 8px;">✕</button>
+          </div>
+          <div class="db-item-desc" id="modDetailDesc"></div>
+          <div style="display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap;">
+            <button class="btn btn-mind" id="btnModLoad">📥 Загрузить в студию</button>
+            <button class="btn" id="btnModDownloadZip">💾 Скачать .zip</button>
+            <button class="btn" id="btnModCopyLink">🔗 Ссылка</button>
+          </div>
+          <div id="modFilesTree" style="max-height: 320px; overflow-y: auto;"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav" id="mobileNav" aria-label="Разделы">
+    <button class="mobile-nav-btn" data-pane="files" id="navFiles"><span class="mobile-nav-ico">📁</span><span>Файлы</span></button>
+    <button class="mobile-nav-btn active" data-pane="editor" id="navEditor"><span class="mobile-nav-ico">✏️</span><span>Редактор</span></button>
+    <button class="mobile-nav-btn" data-pane="inspector" id="navInspector"><span class="mobile-nav-ico">🔍</span><span>Инспектор</span></button>
+  </nav>
+
+  <!-- Help Modal -->
+  <div class="modal-backdrop" id="helpModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>Структура модов в Mindustry (JSON)</span>
+        <button class="btn" id="closeModalBtn" style="padding: 2px 8px;">✕</button>
+      </div>
+      <div class="modal-content">
+        <p><strong>Папки мода Mindustry:</strong></p>
+        <ul style="margin: 8px 0 14px 20px; line-height: 1.6;">
+          <li><code>mod.json</code> — манифест в корневой папке мода.</li>
+          <li><code>content/blocks/</code> — постройки (турели, заводы, стены).</li>
+          <li><code>content/units/</code> — юниты и роботы.</li>
+          <li><code>content/items/</code> — новые ресурсы и руды.</li>
+          <li><code>content/liquids/</code> — новые жидкости и газы.</li>
+          <li><code>sprites/</code> — текстуры в формате PNG (имя совпадает с именем объекта).</li>
+        </ul>
+        <p><strong>Возможности редактора:</strong></p>
+        <ul style="margin: 8px 0 14px 20px; line-height: 1.6;">
+          <li><strong>HJSON (v3.0):</strong> редактор принимает код без кавычек и запятых, а также JSON и HJSON вперемешку — <code>key: value</code>, <code>"ключ": значение</code>, <code>ключ: "значение"</code>, элементы массива через пробел или с новой строки.</li>
+          <li><strong>Комментарии <code>// ... //</code>:</strong> любое предложение между <code>//</code> и <code>//</code> разрешено в синтаксисе и подсвечивается <span style="color:#58a6ff; font-style: italic;">синим цветом</span>. Одиночный <code>// до конца строки</code> тоже работает.</li>
+          <li><code>Tab</code> — аккуратный отступ в 2 пробела.</li>
+          <li>Клик по строке — полный разбор типа данных и назначения параметра.</li>
+          <li>Кнопка «+ Вставить» — мгновенная вставка рекомендованного поля в код.</li>
+          <li>Подсветка синтаксиса: ключи, строки, числа и логические значения окрашены по-разному.</li>
+          <li>При ошибке JSON строка с проблемой подсвечивается красным, а в статусе указывается её номер.</li>
+          <li>Кнопка «📂 Загрузить JSON» открывает готовый файл с диска прямо в редактор.</li>
+          <li>Код автоматически сохраняется в браузере (localStorage) и восстанавливается при перезагрузке.</li>
+        </ul>
+        <p><strong>Горячие клавиши:</strong></p>
+        <ul style="margin: 8px 0 0 20px; line-height: 1.6;">
+          <li><code>Ctrl</code> + <code>S</code> — сохранить текущий код в браузере.</li>
+          <li><code>Ctrl</code> + <code>Shift</code> + <code>F</code> — форматировать и выровнять JSON.</li>
+        </ul>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-mind" id="btnModalOk">Понятно</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>⚙️ Настройки</span>
+        <button class="btn" id="closeSettingsBtn" style="padding: 2px 8px;">✕</button>
+      </div>
+      <div class="modal-content">
+        <p style="margin: 0 0 8px; font-weight: 700;">Интерфейс</p>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <div class="layout-switch" style="flex: 1; margin-left: 0;">
+            <button class="layout-toggle-btn" id="btnLayoutToggle" style="width: 100%; justify-content: center;" title="Вид интерфейса: авто / телефон / компьютер">
+              <span id="layoutToggleIcon">🔄</span><span class="layout-toggle-label" id="layoutToggleLabel">Авто</span>
+            </button>
+          </div>
+          <button class="theme-toggle-btn" id="btnThemeToggle" style="width: 44px;" title="Переключить светлую/тёмную тему">🌙</button>
+        </div>
+
+        <p style="margin: 0 0 8px; font-weight: 700;">Данные</p>
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">
+          База знаний и библиотека рецептов подтягиваются автоматически при запуске. Своя папка с рецептами всегда доступна отдельными кнопками на вкладке «📦 Рецепты».
+        </div>
+        <button class="btn btn-mind" id="btnRefreshData" style="width: 100%;">🔄 Обновить данные</button>
+        <div id="dataRefreshStatus" style="font-size: 11px; color: var(--text-muted); margin-top: 6px; display: none;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-mind" id="closeSettingsBtn2">Готово</button>
+      </div>
+    </div>
+  </div>
+
+<div class="fields-overlay-backdrop" id="fieldsOverlay">
+  <div class="fields-overlay-box">
+    <div class="fields-overlay-head">
+      <span>📚 список полей Mindustry JSON</span>
+      <button class="btn" id="closeFieldsOverlayBtn" style="padding: 2px 8px;">✕</button>
+    </div>
+    <div class="fields-overlay-search">
+      <input type="text" class="search-input" id="fieldsOverlaySearch" placeholder="Поиск по всем полям (по названию, типу, описанию)...">
+    </div>
+    <div class="fields-overlay-body" id="fieldsOverlayBody"></div>
+  </div>
+</div>
+  <div class="toast" id="toast">Уведомление</div>

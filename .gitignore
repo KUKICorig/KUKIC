@@ -1,0 +1,3 @@
+# Build artifacts
+dist/
+__pycache__/
